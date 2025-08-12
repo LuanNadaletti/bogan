@@ -41,7 +41,7 @@ public @interface Component {
     /**
      * Defines the lifecycle scope of the component.
      */
-    ScopeType scope() default ScopeType.PROTOTYPE;
+    ScopeType scope() default ScopeType.SINGLETON;
 
     /**
      * Indicates whether the component should be lazily initialized.

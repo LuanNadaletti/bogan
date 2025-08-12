@@ -15,21 +15,19 @@ import java.util.*;
 public class ComponentSniffer {
 
     public Collection<ComponentDefinition> discover(Class<?> primaryClass) {
-        String basePkg = primaryClass.getPackage().getName();
         ClassLoader cl = primaryClass.getClassLoader();
+        String base = primaryClass.getPackage().getName();
 
-        try (ScanResult scan = new ClassGraph()
-                .enableAllInfo()
+        try (var scan = new ClassGraph().enableAllInfo()
                 .overrideClassLoaders(cl)
-                .acceptPackages(basePkg)
+                .acceptPackages(base)
                 .scan()) {
 
-            Class<?> scanPoint = findSingleScanPoint(scan);
-            String root = scanPoint.getPackage().getName();
+            var scanPoints = scan.getClassesWithAnnotation(ScanPoint.class.getName()).loadClasses();
+            String root = scanPoints.size() == 1 ? scanPoints.getFirst().getPackage().getName() : base;
 
-            try (ScanResult scan2 = new ClassGraph()
-                    .enableAllInfo()
-                    .overrideClassLoaders(cl)      // <-- idem
+            try (var scan2 = new ClassGraph().enableAllInfo()
+                    .overrideClassLoaders(cl)
                     .acceptPackages(root)
                     .scan()) {
                 return buildDefinitions(scan2, root);

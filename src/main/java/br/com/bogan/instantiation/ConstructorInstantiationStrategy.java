@@ -1,6 +1,5 @@
 package br.com.bogan.instantiation;
 
-import br.com.bogan.annotations.Inject;
 import br.com.bogan.definition.ComponentDefinition;
 
 import java.lang.reflect.Constructor;
@@ -19,18 +18,23 @@ public class ConstructorInstantiationStrategy implements InstantiationStrategy {
 
     private Constructor<?> chooseConstructor(Class<?> clazz, Constructor<?>[] ctors, Object[] args) {
         int arity = (args == null) ? 0 : args.length;
-        return Arrays.stream(ctors)
-                .filter(c -> c.isAnnotationPresent(Inject.class) && c.getParameterCount() == arity)
-                .findFirst()
-                .orElseGet(() -> Arrays.stream(ctors)
-                        .filter(c -> c.getParameterCount() == arity)
-                        .findFirst()
-                        .orElseGet(() -> {
-                            try {
-                                return clazz.getDeclaredConstructor();
-                            } catch (NoSuchMethodException e) {
-                                throw new IllegalStateException("No suitable constructor found for " + clazz.getName());
-                            }
-                        }));
+
+        if (ctors.length == 1) {
+            Constructor<?> only = ctors[0];
+            if (only.getParameterCount() != arity) {
+                throw new IllegalStateException("Single constructor arity mismatch for " + clazz.getName());
+            }
+            return only;
+        }
+
+        var annotated = Arrays.stream(ctors)
+                .filter(c -> c.isAnnotationPresent(br.com.bogan.annotations.Inject.class))
+                .filter(c -> c.getParameterCount() == arity)
+                .findFirst();
+
+        if (annotated.isPresent()) return annotated.get();
+
+        throw new IllegalStateException("Multiple constructors in " + clazz.getName()
+                + " require @Inject on the chosen one (arity=" + arity + ")");
     }
 }

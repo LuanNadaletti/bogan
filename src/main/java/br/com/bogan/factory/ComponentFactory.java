@@ -3,6 +3,7 @@ package br.com.bogan.factory;
 import br.com.bogan.annotations.PostConstruct;
 import br.com.bogan.annotations.ScopeType;
 import br.com.bogan.definition.ComponentDefinition;
+import br.com.bogan.definition.InjectionMode;
 import br.com.bogan.error.AmbiguousDependencyException;
 import br.com.bogan.error.CircularDependencyException;
 import br.com.bogan.error.CreationException;
@@ -19,6 +20,7 @@ import br.com.bogan.scope.SingletonScope;
 
 import java.lang.reflect.Method;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ComponentFactory {
 
@@ -26,6 +28,8 @@ public class ComponentFactory {
     private final Map<ScopeType, Scope> scopes = new EnumMap<>(ScopeType.class);
     private final InstantiationStrategy instantiation = new ConstructorInstantiationStrategy();
     private final DependencyResolver resolver = new ReflectiveDependencyResolver();
+
+    private final Map<String, Object> earlySingletons = new ConcurrentHashMap<>();
 
     public ComponentFactory(DefinitionRegistry registry) {
         this.registry = Objects.requireNonNull(registry, "registry");
@@ -70,11 +74,17 @@ public class ComponentFactory {
         return (T) getByDefinition(matches.get(0), ctx);
     }
 
-    private Object getByDefinition(ComponentDefinition def, ResolverContext ctx) {
+    public Object getByDefinition(ComponentDefinition def, ResolverContext ctx) {
         if (ctx.contains(def.getName())) {
             throw new CreationException(def.getName(), new CircularDependencyException(ctx.snapshot()));
         }
+
         Scope scope = scopes.get(def.getScope());
+        if (def.getScope() == ScopeType.SINGLETON) {
+            Object early = earlySingletons.get(def.getName());
+            if (early != null) return early;
+        }
+
         return scope.getOrCreate(def.getName(), () -> create(def, ctx));
     }
 
@@ -83,11 +93,17 @@ public class ComponentFactory {
         try {
             Object[] args = resolver.resolveConstructorArgs(def, ctx);
             Object instance = instantiationSafe(def, args);
+
+            if (def.getScope() == ScopeType.SINGLETON && def.getInjectionMode() != InjectionMode.CONSTRUCTOR) {
+                earlySingletons.put(def.getName(), instance);
+            }
+
             resolver.injectFields(instance, def, ctx);
             invokePostConstructor(instance);
             return instance;
         } finally {
             ctx.pop();
+            earlySingletons.remove(def.getName());
         }
     }
 
@@ -121,5 +137,11 @@ public class ComponentFactory {
                 .filter(d -> d.getScope() == ScopeType.SINGLETON && !d.isLazy())
                 .sorted(Comparator.comparingInt(ComponentDefinition::getOrder))
                 .forEach(d -> getByDefinition(d, new ResolverContext(this)));
+    }
+
+    public List<ComponentDefinition> definitionsByType(Class<?> type) {
+        return registry.all().stream()
+                .filter(d -> type.isAssignableFrom(d.getComponentClass()))
+                .toList();
     }
 }

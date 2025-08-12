@@ -6,6 +6,44 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
+/**
+ * Immutable metadata describing a component managed by the Bogan container.
+ * <p>
+ * A {@code ComponentDefinition} captures the container-facing contract of a component:
+ * its logical {@link #getName() name}, implementation {@link #getComponentClass() class},
+ * lifecycle {@link #getScope() scope}, initialization policy ({@link #isLazy()}),
+ * injection strategy ({@link #getInjectionMode()}), optional type
+ * {@link #getQualifiers() qualifiers}, ordered {@link #getDependencies() dependencies}
+ * and its initialization {@link #getOrder() order}.
+ * </p>
+ *
+ * <h2>Semantics &amp; Invariants</h2>
+ * <ul>
+ *   <li>The definition is <b>immutable</b> after construction.</li>
+ *   <li>{@code name} must be non-blank and unique within a registry.</li>
+ *   <li>{@code componentClass} must be a concrete class (not an interface/abstract).</li>
+ *   <li>{@code dependencies} are ordered to match constructor parameters for
+ *       {@link InjectionMode#CONSTRUCTOR} (or mixed) injection.</li>
+ *   <li>{@code qualifiers} are optional tags used to disambiguate beans of the same type.</li>
+ * </ul>
+ *
+ * <h2>Typical Usage</h2>
+ * <pre>{@code
+ * ComponentDefinition def = new ComponentDefinition(
+ *     "orderService",
+ *     OrderService.class,
+ *     ScopeType.SINGLETON,
+ *     false,                       // eager initialization
+ *     InjectionMode.CONSTRUCTOR,   // inject via constructor
+ *     Set.of("primary"),
+ *     List.of(                     // constructor args: (OrderRepo repo, PaymentGateway gw)
+ *         new DependencyRequirement(OrderRepo.class, null, true, "constructor:param#0"),
+ *         new DependencyRequirement(PaymentGateway.class, "stripe", true, "constructor:param#1")
+ *     ),
+ *     0                            // initialization order
+ * );
+ * }</pre>
+ */
 public class ComponentDefinition {
 
     private final String name;
@@ -17,6 +55,20 @@ public class ComponentDefinition {
     private final List<DependencyRequirement> dependencies;
     private final int order;
 
+    /**
+     * Creates a new immutable component definition.
+     *
+     * @param name           logical bean name (must be unique in a registry and non-blank)
+     * @param componentClass concrete implementation class (not abstract/interface)
+     * @param scope          lifecycle scope (e.g. {@link ScopeType#SINGLETON})
+     * @param lazy           whether the bean is initialized on first access instead of at startup
+     * @param injectionMode  injection strategy (constructor, field, or mixed)
+     * @param qualifiers     optional disambiguation tags (never {@code null})
+     * @param dependencies   ordered dependency requirements (never {@code null})
+     * @param order          initialization order; lower values are initialized earlier
+     * @throws IllegalArgumentException if {@code name} is blank or {@code componentClass} is not concrete
+     * @throws NullPointerException     if a required argument is {@code null}
+     */
     public ComponentDefinition(
             String name,
             Class<?> componentClass,

@@ -1,0 +1,39 @@
+-------------------------------------------------------------------------------
+Test set: br.com.bogan.error.CircularDependencyTest
+-------------------------------------------------------------------------------
+Tests run: 1, Failures: 1, Errors: 0, Skipped: 0, Time elapsed: 0.053 s <<< FAILURE! -- in br.com.bogan.error.CircularDependencyTest
+br.com.bogan.error.CircularDependencyTest.detectsCircularDependency -- Time elapsed: 0.030 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: Unexpected exception type thrown, expected: <br.com.bogan.error.CreationException> but was: <java.lang.IllegalStateException>
+	at org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+	at org.junit.jupiter.api.AssertThrows.assertThrows(AssertThrows.java:67)
+	at org.junit.jupiter.api.AssertThrows.assertThrows(AssertThrows.java:35)
+	at org.junit.jupiter.api.Assertions.assertThrows(Assertions.java:3115)
+	at br.com.bogan.error.CircularDependencyTest.detectsCircularDependency(CircularDependencyTest.java:28)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+Caused by: java.lang.IllegalStateException: Recursive update
+	at java.base/java.util.concurrent.ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1763)
+	at br.com.bogan.scope.SingletonScope.getOrCreate(SingletonScope.java:13)
+	at br.com.bogan.factory.ComponentFactory.getByDefinition(ComponentFactory.java:71)
+	at br.com.bogan.factory.ComponentFactory.getComponent(ComponentFactory.java:64)
+	at br.com.bogan.resolve.ReflectiveDependencyResolver.resolveConstructorArgs(ReflectiveDependencyResolver.java:25)
+	at br.com.bogan.factory.ComponentFactory.create(ComponentFactory.java:78)
+	at br.com.bogan.factory.ComponentFactory.lambda$getByDefinition$2(ComponentFactory.java:71)
+	at br.com.bogan.scope.SingletonScope.lambda$getOrCreate$0(SingletonScope.java:13)
+	at java.base/java.util.concurrent.ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1708)
+	at br.com.bogan.scope.SingletonScope.getOrCreate(SingletonScope.java:13)
+	at br.com.bogan.factory.ComponentFactory.getByDefinition(ComponentFactory.java:71)
+	at br.com.bogan.factory.ComponentFactory.getComponent(ComponentFactory.java:64)
+	at br.com.bogan.resolve.ReflectiveDependencyResolver.resolveConstructorArgs(ReflectiveDependencyResolver.java:25)
+	at br.com.bogan.factory.ComponentFactory.create(ComponentFactory.java:78)
+	at br.com.bogan.factory.ComponentFactory.lambda$getByDefinition$2(ComponentFactory.java:71)
+	at br.com.bogan.scope.SingletonScope.lambda$getOrCreate$0(SingletonScope.java:13)
+	at java.base/java.util.concurrent.ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1708)
+	at br.com.bogan.scope.SingletonScope.getOrCreate(SingletonScope.java:13)
+	at br.com.bogan.factory.ComponentFactory.getByDefinition(ComponentFactory.java:71)
+	at br.com.bogan.factory.ComponentFactory.getComponent(ComponentFactory.java:46)
+	at br.com.bogan.error.CircularDependencyTest.lambda$detectsCircularDependency$0(CircularDependencyTest.java:28)
+	at org.junit.jupiter.api.AssertThrows.assertThrows(AssertThrows.java:53)
+	... 6 more
+

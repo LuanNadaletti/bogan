@@ -1,6 +1,7 @@
 package br.com.bogan.resolve;
 
 import br.com.bogan.annotations.Inject;
+import br.com.bogan.annotations.Primary;
 import br.com.bogan.annotations.Qualifier;
 import br.com.bogan.definition.ComponentDefinition;
 import br.com.bogan.definition.InjectionMode;
@@ -61,7 +62,7 @@ public class ReflectiveDependencyResolver implements DependencyResolver {
         }
         if (candidates.size() > 1) {
             var primary = candidates.stream()
-                    .filter(d -> d.getComponentClass().isAnnotationPresent(br.com.bogan.annotations.Primary.class))
+                    .filter(d -> d.getComponentClass().isAnnotationPresent(Primary.class))
                     .findFirst();
             if (primary.isPresent()) candidates = List.of(primary.get());
         }

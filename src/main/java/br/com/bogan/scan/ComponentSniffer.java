@@ -35,13 +35,6 @@ public class ComponentSniffer {
         }
     }
 
-    private Class<?> findSingleScanPoint(ScanResult scan) {
-        List<Class<?>> found = scan.getClassesWithAnnotation(ScanPoint.class.getName()).loadClasses();
-        if (found.size() != 1)
-            throw new IllegalStateException("Exactly one @ScanPoint is required under primary package; found " + found.size());
-        return found.getFirst();
-    }
-
     private Collection<ComponentDefinition> buildDefinitions(ScanResult scan, String rootPackage) {
         Collection<ComponentDefinition> out = new ArrayList<>();
 

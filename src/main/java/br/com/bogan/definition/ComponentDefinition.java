@@ -89,7 +89,8 @@ public class ComponentDefinition {
 
         if (componentClass.isInterface())
             throw new IllegalArgumentException("Component class must be concrete: " + componentClass);
-        if (name.isBlank()) throw new IllegalArgumentException("Component name cannot be blank");
+        if (name.isBlank())
+            throw new IllegalArgumentException("Component name cannot be blank");
     }
 
     public String getName() {

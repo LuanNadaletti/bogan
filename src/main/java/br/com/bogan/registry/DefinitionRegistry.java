@@ -18,7 +18,8 @@ public class DefinitionRegistry {
         Objects.requireNonNull(def, "definition");
         ComponentDefinition prev = byName.putIfAbsent(def.getName(), def);
 
-        if (prev != null) throw new DuplicateDefinitionException(def.getName());
+        if (prev != null)
+            throw new DuplicateDefinitionException(def.getName());
     }
 
     public void registerAll(Collection<ComponentDefinition> defs) {

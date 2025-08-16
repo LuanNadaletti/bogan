@@ -9,8 +9,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 class ConstructorInstantiationStrategyTest {
 
@@ -23,7 +22,7 @@ class ConstructorInstantiationStrategyTest {
         var strat = new ConstructorInstantiationStrategy();
         var d = def(OneArg.class);
         Object obj = strat.instantiate(d, new Object[]{"x"});
-        assertTrue(obj instanceof OneArg);
+        assertInstanceOf(OneArg.class, obj);
         assertEquals("x", ((OneArg) obj).s);
     }
 
@@ -32,7 +31,7 @@ class ConstructorInstantiationStrategyTest {
         var strat = new ConstructorInstantiationStrategy();
         var d = def(NoArg.class);
         Object obj = strat.instantiate(d, new Object[]{});
-        assertTrue(obj instanceof NoArg);
+        assertInstanceOf(NoArg.class, obj);
     }
 
     @Test
@@ -40,7 +39,7 @@ class ConstructorInstantiationStrategyTest {
         var strat = new ConstructorInstantiationStrategy();
         var d = def(Multi.class);
         Object obj = strat.instantiate(d, new Object[]{"x"});
-        assertTrue(obj instanceof Multi);
+        assertInstanceOf(Multi.class, obj);
     }
 
     static class NoArg {
@@ -61,6 +60,7 @@ class ConstructorInstantiationStrategyTest {
         Multi() {
         }
 
+        @Inject
         Multi(String s) {
         }
     }

@@ -24,40 +24,40 @@ class ComponentFactoryIntegrationTest {
 
     @Test
     void resolvesConstructorInjection() {
-        var reg = new DefinitionRegistry();
+        DefinitionRegistry reg = new DefinitionRegistry();
         reg.register(def("repo", Repo.class, InjectionMode.CONSTRUCTOR, List.of()));
         reg.register(def("service", ServiceCtor.class, InjectionMode.CONSTRUCTOR,
                 List.of(new DependencyRequirement(Repo.class, null, true, "constructor:param#0"))));
 
-        var factory = new ComponentFactory(reg);
+        ComponentFactory factory = new ComponentFactory(reg);
         ServiceCtor s = factory.getComponent(ServiceCtor.class);
         assertNotNull(s.repo);
     }
 
     @Test
     void resolvesFieldInjection() {
-        var reg = new DefinitionRegistry();
+        DefinitionRegistry reg = new DefinitionRegistry();
         reg.register(def("repo", Repo.class, InjectionMode.CONSTRUCTOR, List.of()));
         reg.register(def("service", ServiceField.class, InjectionMode.FIELD, List.of()));
 
-        var factory = new ComponentFactory(reg);
+        ComponentFactory factory = new ComponentFactory(reg);
         ServiceField s = factory.getComponent(ServiceField.class);
         assertNotNull(s.repo);
     }
 
     @Test
     void ambiguousByTypeThrows() {
-        var reg = new DefinitionRegistry();
+        DefinitionRegistry reg = new DefinitionRegistry();
         reg.register(def("repo1", Repo.class, InjectionMode.CONSTRUCTOR, List.of()));
         reg.register(def("repo2", RepoAlt.class, InjectionMode.CONSTRUCTOR, List.of()));
-        var factory = new ComponentFactory(reg);
+        ComponentFactory factory = new ComponentFactory(reg);
         assertThrows(AmbiguousDependencyException.class, () -> factory.getComponent(Repo.class));
     }
 
     @Test
     void missingBeanThrows() {
-        var reg = new DefinitionRegistry();
-        var factory = new ComponentFactory(reg);
+        DefinitionRegistry reg = new DefinitionRegistry();
+        ComponentFactory factory = new ComponentFactory(reg);
         assertThrows(NoSuchComponentException.class, () -> factory.getComponent("x"));
     }
 

@@ -11,9 +11,13 @@ import br.com.bogan.error.NoSuchComponentException;
 import br.com.bogan.instantiation.ConstructorInstantiationStrategy;
 import br.com.bogan.instantiation.InstantiationStrategy;
 import br.com.bogan.registry.DefinitionRegistry;
+import br.com.bogan.resolve.CandidateSelector;
 import br.com.bogan.resolve.DependencyResolver;
 import br.com.bogan.resolve.ReflectiveDependencyResolver;
 import br.com.bogan.resolve.ResolverContext;
+import br.com.bogan.resolve.injection.ProviderInjectionAdapter;
+import br.com.bogan.resolve.injection.SpecialInjectionAdapter;
+import br.com.bogan.scan.ReflectionModeCache;
 import br.com.bogan.scope.PrototypeScope;
 import br.com.bogan.scope.Scope;
 import br.com.bogan.scope.SingletonScope;
@@ -27,7 +31,7 @@ public class ComponentFactory {
     private final DefinitionRegistry registry;
     private final Map<ScopeType, Scope> scopes = new EnumMap<>(ScopeType.class);
     private final InstantiationStrategy instantiation = new ConstructorInstantiationStrategy();
-    private final DependencyResolver resolver = new ReflectiveDependencyResolver();
+    private final DependencyResolver resolver = new ReflectiveDependencyResolver(getAdapters(), new CandidateSelector(), new ReflectionModeCache());
 
     private final Map<String, Object> earlySingletons = new ConcurrentHashMap<>();
 
@@ -68,10 +72,11 @@ public class ComponentFactory {
                 .filter(d -> type.isAssignableFrom(d.getComponentClass()))
                 .filter(d -> qualifier == null || d.getQualifiers().contains(qualifier))
                 .toList();
-        if (matches.isEmpty()) throw new NoSuchComponentException(type.getName());
+        if (matches.isEmpty())
+            throw new NoSuchComponentException(type.getName());
         if (matches.size() > 1)
             throw new AmbiguousDependencyException(type, matches.stream().map(ComponentDefinition::getName).toList());
-        return (T) getByDefinition(matches.get(0), ctx);
+        return (T) getByDefinition(matches.getFirst(), ctx);
     }
 
     public Object getByDefinition(ComponentDefinition def, ResolverContext ctx) {
@@ -139,9 +144,13 @@ public class ComponentFactory {
                 .forEach(d -> getByDefinition(d, new ResolverContext(this)));
     }
 
-    public List<ComponentDefinition> definitionsByType(Class<?> type) {
+    public List<ComponentDefinition> getDefinitionsByType(Class<?> type) {
         return registry.all().stream()
                 .filter(d -> type.isAssignableFrom(d.getComponentClass()))
                 .toList();
+    }
+
+    private List<SpecialInjectionAdapter> getAdapters() {
+        return List.of(new ProviderInjectionAdapter());
     }
 }

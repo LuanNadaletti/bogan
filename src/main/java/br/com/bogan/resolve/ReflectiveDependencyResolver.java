@@ -1,29 +1,59 @@
 package br.com.bogan.resolve;
 
 import br.com.bogan.annotations.Inject;
-import br.com.bogan.annotations.Primary;
 import br.com.bogan.annotations.Qualifier;
-import br.com.bogan.definition.ComponentDefinition;
-import br.com.bogan.definition.InjectionMode;
-import br.com.bogan.error.AmbiguousDependencyException;
+import br.com.bogan.definition.*;
 import br.com.bogan.error.InjectionException;
 import br.com.bogan.error.NoSuchComponentException;
+import br.com.bogan.resolve.injection.SpecialInjectionAdapter;
+import br.com.bogan.scan.ReflectionModeCache;
+import br.com.bogan.util.ComponentNameUtils;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class ReflectiveDependencyResolver implements DependencyResolver {
 
+    private final List<SpecialInjectionAdapter> adapters;
+    private final CandidateSelector selector;
+    private final ReflectionModeCache cache;
+
+    public ReflectiveDependencyResolver(List<SpecialInjectionAdapter> adapters, CandidateSelector selector, ReflectionModeCache cache) {
+        this.adapters = adapters;
+        this.selector = selector;
+        this.cache = cache;
+    }
+
     @Override
     public Object[] resolveConstructorArgs(ComponentDefinition def, ResolverContext ctx) {
-        if (def.getInjectionMode() == InjectionMode.FIELD) return new Object[0];
-        var reqs = def.getDependencies();
-        var args = new ArrayList<>(reqs.size());
-        for (var r : reqs) {
-            args.add(resolveByTypeAndQualifier(ctx, r.getType(), r.getQualifier(), r.isRequired()));
+        InjectionModel model = cache.getOrBuild(def.getComponentClass());
+        List<InjectionPoint> ctorParams = model.getCtorParams();
+        if (ctorParams.isEmpty()) return new Object[0];
+
+        Object[] args = new Object[ctorParams.size()];
+
+        for (int i = 0; i < ctorParams.size(); i++) {
+            InjectionPoint p = ctorParams.get(i);
+
+            Optional<Object> adapted = tryAdapters(p, ctx);
+            if (adapted.isPresent()) {
+                args[i] = adapted.get();
+                continue;
+            }
+
+            Optional<Object> selected = resolveByTypeAndQualifier(ctx, p.getRawType(), p.getQualifier(), p.isRequired());
+
+            if (selected.isPresent()) {
+                args[i] = selected.get();
+                continue;
+            }
+
+            args[i] = null;
         }
-        return args.toArray();
+
+        return args;
     }
 
     @Override
@@ -31,8 +61,9 @@ public class ReflectiveDependencyResolver implements DependencyResolver {
         if (def.getInjectionMode() == InjectionMode.CONSTRUCTOR) return;
         for (Field f : def.getComponentClass().getDeclaredFields()) {
             if (f.isAnnotationPresent(Inject.class)) {
-                String q = f.isAnnotationPresent(Qualifier.class) ? f.getAnnotation(Qualifier.class).value() : null;
-                Object dep = resolveByTypeAndQualifier(ctx, f.getType(), q, true);
+                InjectionPoint injectionPoint = InjectionPoint.from(f);
+                Object dep = getResolvedByAdapterOrFactory(f, ctx, injectionPoint);
+
                 try {
                     f.setAccessible(true);
                     f.set(target, dep);
@@ -43,33 +74,37 @@ public class ReflectiveDependencyResolver implements DependencyResolver {
         }
     }
 
-    private Object resolveByTypeAndQualifier(ResolverContext ctx, Class<?> type, String qualifier, boolean required) {
-        if (type == java.util.Optional.class) {
-            throw new UnsupportedOperationException("Handle Optional<T> at parameter metadata time");
+    private Optional<Object> resolveByTypeAndQualifier(ResolverContext ctx, Class<?> type, String qualifier, boolean required) {
+        Optional<ComponentDefinition> def = selector.resolveCandidate(ctx, type, qualifier, required);
+
+        if (def.isEmpty() && required) {
+            throw new NoSuchComponentException(ComponentNameUtils.formatNameAndQualifier(type, qualifier));
         }
 
-        var candidates = ctx.factory().definitionsByType(type);
-        if (candidates.isEmpty()) {
-            if (required) throw new NoSuchComponentException(type.getName());
-            return null;
+        return Optional.of(ctx.factory().getByDefinition(def.get(), ctx));
+    }
+
+    private Optional<Object> tryAdapters(InjectionPoint p, ResolverContext ctx) {
+        for (SpecialInjectionAdapter adapter : adapters) {
+            if (adapter.supports(p)) {
+                return Optional.ofNullable(adapter.resolve(p, ctx));
+            }
         }
-        if (qualifier != null) {
-            candidates = candidates.stream()
-                    .filter(d -> d.getQualifiers().contains(qualifier))
-                    .toList();
-            if (candidates.isEmpty())
-                throw new NoSuchComponentException(type.getName() + " (qualifier=" + qualifier + ")");
+        return Optional.empty();
+    }
+
+    private Object getResolvedByAdapterOrFactory(Field field, ResolverContext ctx, InjectionPoint injectionPoint) {
+        Optional<Object> fromAdapter = adapters.stream()
+                .filter(adapter -> adapter.supports(injectionPoint))
+                .map(adapter -> adapter.resolve(injectionPoint, ctx))
+                .findFirst();
+
+        if (fromAdapter.isPresent()) {
+            return fromAdapter.get();
         }
-        if (candidates.size() > 1) {
-            var primary = candidates.stream()
-                    .filter(d -> d.getComponentClass().isAnnotationPresent(Primary.class))
-                    .findFirst();
-            if (primary.isPresent()) candidates = List.of(primary.get());
-        }
-        if (candidates.size() > 1) {
-            throw new AmbiguousDependencyException(type, candidates.stream().map(ComponentDefinition::getName).toList());
-        }
-        var def = candidates.getFirst();
-        return ctx.factory().getByDefinition(def, ctx);
+
+        String q = field.isAnnotationPresent(Qualifier.class) ? field.getAnnotation(Qualifier.class).value() : null;
+        return resolveByTypeAndQualifier(ctx, field.getType(), q, true)
+                .orElseThrow(() -> new NoSuchComponentException(injectionPoint.getMemberName()));
     }
 }

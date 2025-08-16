@@ -1,5 +1,6 @@
 package br.com.bogan.error;
 
+import br.com.bogan.annotations.Component;
 import br.com.bogan.annotations.ScopeType;
 import br.com.bogan.definition.ComponentDefinition;
 import br.com.bogan.definition.DependencyRequirement;
@@ -11,7 +12,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 
 class CircularDependencyTest {
 

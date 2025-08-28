@@ -11,7 +11,7 @@ public class ProviderInjectionAdapter implements SpecialInjectionAdapter {
 
     @Override
     public boolean supports(InjectionPoint p) {
-        return p.getRawType().isAssignableFrom(Provider.class);
+        return Provider.class.isAssignableFrom(p.getRawType());
     }
 
     @Override

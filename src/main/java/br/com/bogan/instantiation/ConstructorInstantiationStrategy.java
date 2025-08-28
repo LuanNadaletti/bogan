@@ -9,7 +9,7 @@ public class ConstructorInstantiationStrategy implements InstantiationStrategy {
 
     @Override
     public Object instantiate(ComponentDefinition def, Object[] args) throws Exception {
-        Class<?> clazz = def.getComponentClass();
+        Class<?> clazz = def.componentClass();
         Constructor<?>[] ctors = clazz.getDeclaredConstructors();
         Constructor<?> chosen = ReflectionUtil.chooseConstructor(clazz, ctors, args)
                 .orElseThrow(() -> {

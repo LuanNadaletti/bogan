@@ -16,8 +16,8 @@ class ComponentSnifferTest {
     void discoversComponentsUnderScanPoint() {
         var sniffer = new ComponentSniffer();
         Collection<ComponentDefinition> defs = sniffer.discover(ComponentSnifferTest.class);
-        assertTrue(defs.stream().anyMatch(d -> d.getComponentClass().equals(Dep.class)));
-        assertTrue(defs.stream().anyMatch(d -> d.getComponentClass().equals(Svc.class)));
+        assertTrue(defs.stream().anyMatch(d -> d.componentClass().equals(Dep.class)));
+        assertTrue(defs.stream().anyMatch(d -> d.componentClass().equals(Svc.class)));
     }
 
     @ScanPoint

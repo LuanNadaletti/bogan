@@ -21,6 +21,7 @@ import br.com.bogan.scan.ReflectionModeCache;
 import br.com.bogan.scope.PrototypeScope;
 import br.com.bogan.scope.Scope;
 import br.com.bogan.scope.SingletonScope;
+import br.com.bogan.util.ReflectionUtil;
 
 import java.lang.reflect.Method;
 import java.util.*;
@@ -69,38 +70,38 @@ public class ComponentFactory {
     @SuppressWarnings("unchecked")
     public <T> T getComponent(Class<T> type, String qualifier, ResolverContext ctx) {
         var matches = registry.all().stream()
-                .filter(d -> type.isAssignableFrom(d.getComponentClass()))
-                .filter(d -> qualifier == null || d.getQualifiers().contains(qualifier))
+                .filter(d -> type.isAssignableFrom(d.componentClass()))
+                .filter(d -> qualifier == null || d.qualifiers().contains(qualifier))
                 .toList();
         if (matches.isEmpty())
             throw new NoSuchComponentException(type.getName());
         if (matches.size() > 1)
-            throw new AmbiguousDependencyException(type, matches.stream().map(ComponentDefinition::getName).toList());
+            throw new AmbiguousDependencyException(type, matches.stream().map(ComponentDefinition::name).toList());
         return (T) getByDefinition(matches.getFirst(), ctx);
     }
 
     public Object getByDefinition(ComponentDefinition def, ResolverContext ctx) {
-        if (ctx.contains(def.getName())) {
-            throw new CreationException(def.getName(), new CircularDependencyException(ctx.snapshot()));
-        }
-
-        Scope scope = scopes.get(def.getScope());
-        if (def.getScope() == ScopeType.SINGLETON) {
-            Object early = earlySingletons.get(def.getName());
+        Scope scope = scopes.get(def.scope());
+        if (def.scope() == ScopeType.SINGLETON) {
+            Object early = earlySingletons.get(def.name());
             if (early != null) return early;
         }
 
-        return scope.getOrCreate(def.getName(), () -> create(def, ctx));
+        if (ctx.contains(def.name())) {
+            throw new CreationException(def.name(), new CircularDependencyException(ctx.snapshot()));
+        }
+
+        return scope.getOrCreate(def.name(), () -> create(def, ctx));
     }
 
     private Object create(ComponentDefinition def, ResolverContext ctx) {
-        ctx.push(def.getName());
+        ctx.push(def.name());
         try {
             Object[] args = resolver.resolveConstructorArgs(def, ctx);
             Object instance = instantiationSafe(def, args);
 
-            if (def.getScope() == ScopeType.SINGLETON && def.getInjectionMode() != InjectionMode.CONSTRUCTOR) {
-                earlySingletons.put(def.getName(), instance);
+            if (def.scope() == ScopeType.SINGLETON && def.injectionMode() != InjectionMode.CONSTRUCTOR) {
+                earlySingletons.put(def.name(), instance);
             }
 
             resolver.injectFields(instance, def, ctx);
@@ -108,7 +109,7 @@ public class ComponentFactory {
             return instance;
         } finally {
             ctx.pop();
-            earlySingletons.remove(def.getName());
+            earlySingletons.remove(def.name());
         }
     }
 
@@ -116,7 +117,7 @@ public class ComponentFactory {
         try {
             return instantiation.instantiate(def, args);
         } catch (Throwable t) {
-            throw new CreationException(def.getName(), t);
+            throw new CreationException(def.name(), t);
         }
     }
 
@@ -124,8 +125,7 @@ public class ComponentFactory {
         for (Method m : instance.getClass().getDeclaredMethods()) {
             if (m.isAnnotationPresent(PostConstruct.class) && m.getParameterCount() == 0) {
                 try {
-                    m.setAccessible(true);
-                    m.invoke(instance);
+                    ReflectionUtil.executeMethod(m, instance);
                 } catch (Exception e) {
                     throw new CreationException(instance.getClass().getName() + ".@PostConstruct", e);
                 }
@@ -134,19 +134,18 @@ public class ComponentFactory {
     }
 
     public void shutdown() {
-        // TODO: track created singletons to invoke @PreDestroy predictably.
     }
 
     public void initialize() {
         registry.all().stream()
-                .filter(d -> d.getScope() == ScopeType.SINGLETON && !d.isLazy())
-                .sorted(Comparator.comparingInt(ComponentDefinition::getOrder))
+                .filter(d -> d.scope() == ScopeType.SINGLETON && !d.lazy())
+                .sorted(Comparator.comparingInt(ComponentDefinition::order))
                 .forEach(d -> getByDefinition(d, new ResolverContext(this)));
     }
 
     public List<ComponentDefinition> getDefinitionsByType(Class<?> type) {
         return registry.all().stream()
-                .filter(d -> type.isAssignableFrom(d.getComponentClass()))
+                .filter(d -> type.isAssignableFrom(d.componentClass()))
                 .toList();
     }
 

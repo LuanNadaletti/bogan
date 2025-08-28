@@ -10,11 +10,11 @@ import java.util.Set;
  * Immutable metadata describing a component managed by the Bogan container.
  * <p>
  * A {@code ComponentDefinition} captures the container-facing contract of a component:
- * its logical {@link #getName() name}, implementation {@link #getComponentClass() class},
- * lifecycle {@link #getScope() scope}, initialization policy ({@link #isLazy()}),
- * injection strategy ({@link #getInjectionMode()}), optional type
- * {@link #getQualifiers() qualifiers}, ordered {@link #getDependencies() dependencies}
- * and its initialization {@link #getOrder() order}.
+ * its logical {@link #name () name}, implementation {@link #componentClass () class},
+ * lifecycle {@link #scope () scope}, initialization policy ({@link #lazy ()}),
+ * injection strategy ({@link #injectionMode ()}), optional type
+ * {@link #qualifiers () qualifiers}, ordered {@link #dependencies () dependencies}
+ * and its initialization {@link #order () order}.
  * </p>
  *
  * <h2>Semantics &amp; Invariants</h2>
@@ -44,16 +44,9 @@ import java.util.Set;
  * );
  * }</pre>
  */
-public class ComponentDefinition {
-
-    private final String name;
-    private final Class<?> componentClass;
-    private final ScopeType scope;
-    private final boolean lazy;
-    private final InjectionMode injectionMode;
-    private final Set<String> qualifiers;
-    private final List<DependencyRequirement> dependencies;
-    private final int order;
+public record ComponentDefinition(String name, Class<?> componentClass, ScopeType scope, boolean lazy,
+                                  InjectionMode injectionMode, Set<String> qualifiers,
+                                  List<DependencyRequirement> dependencies, int order) {
 
     /**
      * Creates a new immutable component definition.
@@ -91,38 +84,6 @@ public class ComponentDefinition {
             throw new IllegalArgumentException("Component class must be concrete: " + componentClass);
         if (name.isBlank())
             throw new IllegalArgumentException("Component name cannot be blank");
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public Class<?> getComponentClass() {
-        return componentClass;
-    }
-
-    public ScopeType getScope() {
-        return scope;
-    }
-
-    public boolean isLazy() {
-        return lazy;
-    }
-
-    public InjectionMode getInjectionMode() {
-        return injectionMode;
-    }
-
-    public Set<String> getQualifiers() {
-        return qualifiers;
-    }
-
-    public List<DependencyRequirement> getDependencies() {
-        return dependencies;
-    }
-
-    public int getOrder() {
-        return order;
     }
 
     @Override

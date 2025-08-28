@@ -15,10 +15,10 @@ public class ComponentNameUtils {
     }
 
     public static String formatDefinitionName(ComponentDefinition def) {
-        String base = def.getName();
-        if (!def.getQualifiers().isEmpty()) {
-            base += " " + def.getQualifiers();
+        String base = def.name();
+        if (!def.qualifiers().isEmpty()) {
+            base += " " + def.qualifiers();
         }
-        return base + " [" + def.getComponentClass().getName() + "]";
+        return base + " [" + def.componentClass().getName() + "]";
     }
 }

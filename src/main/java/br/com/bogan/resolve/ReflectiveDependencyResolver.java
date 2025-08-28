@@ -10,7 +10,7 @@ import br.com.bogan.scan.ReflectionModeCache;
 import br.com.bogan.util.ComponentNameUtils;
 
 import java.lang.reflect.Field;
-import java.util.ArrayList;
+import java.lang.reflect.Modifier;
 import java.util.List;
 import java.util.Optional;
 
@@ -28,7 +28,7 @@ public class ReflectiveDependencyResolver implements DependencyResolver {
 
     @Override
     public Object[] resolveConstructorArgs(ComponentDefinition def, ResolverContext ctx) {
-        InjectionModel model = cache.getOrBuild(def.getComponentClass());
+        InjectionModel model = cache.getOrBuild(def.componentClass());
         List<InjectionPoint> ctorParams = model.getCtorParams();
         if (ctorParams.isEmpty()) return new Object[0];
 
@@ -58,9 +58,13 @@ public class ReflectiveDependencyResolver implements DependencyResolver {
 
     @Override
     public void injectFields(Object target, ComponentDefinition def, ResolverContext ctx) {
-        if (def.getInjectionMode() == InjectionMode.CONSTRUCTOR) return;
-        for (Field f : def.getComponentClass().getDeclaredFields()) {
+        if (def.injectionMode() == InjectionMode.CONSTRUCTOR) return;
+        for (Field f : def.componentClass().getDeclaredFields()) {
             if (f.isAnnotationPresent(Inject.class)) {
+                if (Modifier.isStatic(f.getModifiers()) || Modifier.isFinal(f.getModifiers())) {
+                    throw new IllegalArgumentException("Static or final fields cannot be injected");
+                }
+
                 InjectionPoint injectionPoint = InjectionPoint.from(f);
                 Object dep = getResolvedByAdapterOrFactory(f, ctx, injectionPoint);
 

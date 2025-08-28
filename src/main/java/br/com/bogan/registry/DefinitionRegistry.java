@@ -16,10 +16,10 @@ public class DefinitionRegistry {
 
     public void register(ComponentDefinition def) {
         Objects.requireNonNull(def, "definition");
-        ComponentDefinition prev = byName.putIfAbsent(def.getName(), def);
+        ComponentDefinition prev = byName.putIfAbsent(def.name(), def);
 
         if (prev != null)
-            throw new DuplicateDefinitionException(def.getName());
+            throw new DuplicateDefinitionException(def.name());
     }
 
     public void registerAll(Collection<ComponentDefinition> defs) {
@@ -28,7 +28,9 @@ public class DefinitionRegistry {
 
     public ComponentDefinition get(String componentName) {
         ComponentDefinition def = byName.get(componentName);
-        if (def == null) throw new NoSuchComponentException(componentName);
+        if (def == null)
+            throw new NoSuchComponentException(componentName);
+
         return def;
     }
 

@@ -24,7 +24,7 @@ public class CandidateSelector {
 
         if (qualifier != null && !qualifier.isBlank()) {
             candidates = candidates.stream()
-                    .filter(d -> d.getQualifiers().contains(qualifier))
+                    .filter(d -> d.qualifiers().contains(qualifier))
                     .toList();
 
             if (candidates.isEmpty()) {
@@ -34,19 +34,19 @@ public class CandidateSelector {
         }
 
         List<ComponentDefinition> primaries = candidates.stream()
-                .filter(d -> d.getComponentClass().isAnnotationPresent(Primary.class))
+                .filter(d -> d.componentClass().isAnnotationPresent(Primary.class))
                 .toList();
 
         if (primaries.size() > 1) {
             throw new AmbiguousDependencyException(type,
-                    primaries.stream().map(ComponentDefinition::getName).toList());
+                    primaries.stream().map(ComponentDefinition::name).toList());
         } else if (primaries.size() == 1) {
             return Optional.of(primaries.getFirst());
         }
 
         if (candidates.size() > 1) {
             throw new AmbiguousDependencyException(type,
-                    candidates.stream().map(ComponentDefinition::getName).toList());
+                    candidates.stream().map(ComponentDefinition::name).toList());
         }
 
         return Optional.of(candidates.getFirst());
